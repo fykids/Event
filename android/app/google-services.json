@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "338642023579",
+    "project_id": "tubesmobile-88d75",
+    "storage_bucket": "tubesmobile-88d75.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:338642023579:android:de2cfe67c29a52105f023e",
+        "android_client_info": {
+          "package_name": "com.example.tubes"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhUVCcx1M-_kBKPKgWoqToHgFUNY4AKFY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
