@@ -49,16 +49,20 @@ class AppBloc extends Bloc<AppEvent, AppState> {
         final user = authRepository.currentUser;
 
         if (user != null) {
+          // Emit success first, then authenticated
+          emit(AuthSuccess());
+          // Small delay to ensure success state is processed
+          await Future.delayed(Duration(milliseconds: 100));
           emit(Authenticated(user: user));
         } else {
           emit(
-            AuthFailure(
-              message: 'Registrasi berhasil tetapi user tidak di temukan',
-            ),
+            AuthFailure(message: 'Registration successful but user not found'),
           );
         }
       } catch (e) {
-        emit(AuthFailure(message: e.toString()));
+        // Better error handling for Firebase Auth errors
+        String errorMessage = _getFirebaseErrorMessage(e.toString());
+        emit(AuthFailure(message: errorMessage));
       }
     });
 
@@ -71,5 +75,19 @@ class AppBloc extends Bloc<AppEvent, AppState> {
         emit(AuthFailure(message: e.toString()));
       }
     });
+  }
+
+  String _getFirebaseErrorMessage(String error) {
+    if (error.contains('email-already-in-use')) {
+      return 'This email is already registered. Please use a different email.';
+    } else if (error.contains('weak-password')) {
+      return 'Password is too weak. Please choose a stronger password.';
+    } else if (error.contains('invalid-email')) {
+      return 'Invalid email address. Please enter a valid email.';
+    } else if (error.contains('network-request-failed')) {
+      return 'Network error. Please check your internet connection.';
+    } else {
+      return 'Registration failed. Please try again.';
+    }
   }
 }

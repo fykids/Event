@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tubes/bloc/app/app_bloc.dart';
+import 'package:tubes/bloc/app/app_state.dart';
 import 'package:tubes/bloc/navigation/navigation_bloc.dart';
 import 'package:tubes/bloc/navigation/navigation_event.dart';
 import 'package:tubes/helper/widget_app.dart';
+import 'package:tubes/screen/login/login_screen.dart';
 import 'package:tubes/screen/register/register_view_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class RegisterScreen extends StatelessWidget {
   final AppBloc appBloc;
@@ -14,17 +17,19 @@ class RegisterScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => RegisterViewModel(appBloc: appBloc),
-      child: RegisterScreenBody(),
+      child: const RegisterScreenBody(),
     );
   }
 }
 
 class RegisterScreenBody extends StatefulWidget {
+  const RegisterScreenBody({super.key});
+
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  RegisterScreenState createState() => RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreenBody>
+class RegisterScreenState extends State<RegisterScreenBody>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -33,7 +38,6 @@ class _RegisterScreenState extends State<RegisterScreenBody>
   final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  bool _isLoading = false;
   bool _acceptTerms = false;
 
   late AnimationController _fadeController;
@@ -45,11 +49,11 @@ class _RegisterScreenState extends State<RegisterScreenBody>
   void initState() {
     super.initState();
     _fadeController = AnimationController(
-      duration: Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
     _slideController = AnimationController(
-      duration: Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
@@ -57,8 +61,8 @@ class _RegisterScreenState extends State<RegisterScreenBody>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
 
-    _slideAnimation = Tween<Offset>(begin: Offset(0, 0.5), end: Offset.zero)
-        .animate(
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
           CurvedAnimation(parent: _slideController, curve: Curves.elasticOut),
         );
 
@@ -80,61 +84,115 @@ class _RegisterScreenState extends State<RegisterScreenBody>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: GradientBackground.decoration,
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                vertical: 24,
-              ), // tambah padding atas bawah
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: RegisterLogoSection(),
-                  ),
-                  SizedBox(height: 24),
-                  SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
+      body: BlocListener<AppBloc, AppState>(
+        bloc: context.read<RegisterViewModel>().appBloc,
+        listener: (context, state) {
+          final viewModel = context.read<RegisterViewModel>();
+
+          if (state is AuthLoading) {
+            // Registration in progress
+            viewModel.setLoading(true);
+          } else if (state is AuthSuccess) {
+            // Registration successful - show success message
+            viewModel.setLoading(false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Registration successful!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+            // Don't navigate immediately, wait for Authenticated state
+          } else if (state is Authenticated) {
+            // User is now authenticated, navigate to login or home
+            viewModel.setLoading(false);
+
+            // Navigate to home or dashboard instead of login
+            // Since user is already authenticated after registration
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) =>
+                    LoginScreen(appBloc: context.read<AppBloc>()),
+              ),
+              (route) => false,
+            );
+          } else if (state is AuthFailure) {
+            // Registration failed
+            viewModel.setLoading(false);
+            viewModel.setError(state.message);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          } else if (state is Unauthenticated) {
+            // Handle unauthenticated state
+            viewModel.setLoading(false);
+          }
+        },
+        child: Container(
+          decoration: GradientBackground.decoration,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FadeTransition(
                       opacity: _fadeAnimation,
-                      child: RegisterForm(
-                        formKey: _formKey,
-                        nameController: _nameController,
-                        emailController: _emailController,
-                        passwordController: _passwordController,
-                        confirmPasswordController: _confirmPasswordController,
-                        isPasswordVisible: _isPasswordVisible,
-                        isConfirmPasswordVisible: _isConfirmPasswordVisible,
-                        isLoading: _isLoading,
-                        acceptTerms: _acceptTerms,
-                        onPasswordVisibilityToggle: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
-                        onConfirmPasswordVisibilityToggle: () {
-                          setState(() {
-                            _isConfirmPasswordVisible =
-                                !_isConfirmPasswordVisible;
-                          });
-                        },
-                        onTermsToggle: () {
-                          setState(() {
-                            _acceptTerms = !_acceptTerms;
-                          });
-                        },
-                        onRegister: _handleRegister,
-                        onBackToLogin: () {
-                          context.read<NavigationBloc>()
-                            ..add(NavigateToLogin());
-                        },
+                      child: const RegisterLogoSection(),
+                    ),
+                    const SizedBox(height: 24),
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Consumer<RegisterViewModel>(
+                          builder: (context, viewModel, child) {
+                            return RegisterForm(
+                              formKey: _formKey,
+                              nameController: _nameController,
+                              emailController: _emailController,
+                              passwordController: _passwordController,
+                              confirmPasswordController:
+                                  _confirmPasswordController,
+                              isPasswordVisible: _isPasswordVisible,
+                              isConfirmPasswordVisible:
+                                  _isConfirmPasswordVisible,
+                              isLoading: viewModel.isLoading,
+                              acceptTerms: _acceptTerms,
+                              onPasswordVisibilityToggle: () {
+                                setState(() {
+                                  _isPasswordVisible = !_isPasswordVisible;
+                                });
+                              },
+                              onConfirmPasswordVisibilityToggle: () {
+                                setState(() {
+                                  _isConfirmPasswordVisible =
+                                      !_isConfirmPasswordVisible;
+                                });
+                              },
+                              onTermsToggle: () {
+                                setState(() {
+                                  _acceptTerms = !_acceptTerms;
+                                });
+                              },
+                              onRegister: _handleRegister,
+                              onBackToLogin: () {
+                                context.read<NavigationBloc>().add(
+                                  NavigateToLogin(),
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -144,49 +202,60 @@ class _RegisterScreenState extends State<RegisterScreenBody>
   }
 
   void _handleRegister() async {
-    if (_formKey.currentState!.validate() && _acceptTerms) {
-      setState(() {
-        _isLoading = true;
-      });
+    final viewModel = context.read<RegisterViewModel>();
 
-      // Simulate register process
-      await Future.delayed(Duration(seconds: 2));
+    // Clear any previous errors
+    viewModel.clearError();
 
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Add your register logic here
-      print(
-        'Register with name: ${_nameController.text}, email: ${_emailController.text}',
-      );
-    } else if (!_acceptTerms) {
+    if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
+          content: Text('Please fix the errors in the form'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!_acceptTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
           content: Text('Please accept terms and conditions'),
           backgroundColor: Colors.red,
         ),
       );
+      return;
     }
+
+    // Update view model dengan nilai dari controller
+    viewModel.updateName(_nameController.text.trim());
+    viewModel.updateEmail(_emailController.text.trim());
+    viewModel.updatePassword(_passwordController.text);
+    viewModel.updateConfirmPassword(_confirmPasswordController.text);
+
+    // Call register - the BlocListener will handle the response
+    await viewModel.register();
   }
 }
 
 class RegisterLogoSection extends StatelessWidget {
+  const RegisterLogoSection({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(32),
+      padding: const EdgeInsets.all(32),
       child: SafeArea(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              RegisterGlowingLogo(),
-              SizedBox(height: 16),
+              const RegisterGlowingLogo(),
+              const SizedBox(height: 16),
               ShaderMask(
                 shaderCallback: (bounds) =>
                     YellowGradients.primary.createShader(bounds),
-                child: Text(
+                child: const Text(
                   'Create Account',
                   style: TextStyle(
                     fontSize: 28,
@@ -195,7 +264,7 @@ class RegisterLogoSection extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'Join us today',
                 style: TextStyle(fontSize: 16, color: Colors.grey[400]),
@@ -209,38 +278,75 @@ class RegisterLogoSection extends StatelessWidget {
 }
 
 class RegisterGlowingLogo extends StatefulWidget {
+  const RegisterGlowingLogo({super.key});
+
   @override
-  _RegisterGlowingLogoState createState() => _RegisterGlowingLogoState();
+  RegisterGlowingLogoState createState() => RegisterGlowingLogoState();
 }
 
-class _RegisterGlowingLogoState extends State<RegisterGlowingLogo>
+class RegisterGlowingLogoState extends State<RegisterGlowingLogo>
     with SingleTickerProviderStateMixin {
-  late AnimationController _glowController;
-  late Animation<double> _glowAnimation;
+  AnimationController? _glowController;
+  Animation<double>? _glowAnimation;
 
   @override
   void initState() {
     super.initState();
-    _glowController = AnimationController(
-      duration: Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: true);
+    try {
+      _glowController = AnimationController(
+        duration: const Duration(seconds: 2),
+        vsync: this,
+      );
 
-    _glowAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
-    );
+      _glowAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+        CurvedAnimation(parent: _glowController!, curve: Curves.easeInOut),
+      );
+
+      // Start the animation after initialization
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _glowController != null) {
+          _glowController!.repeat(reverse: true);
+        }
+      });
+    } catch (e) {
+      debugPrint('Error initializing glow animation: $e');
+    }
   }
 
   @override
   void dispose() {
-    _glowController.dispose();
+    _glowController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Fallback if animation is not initialized
+    if (_glowAnimation == null || _glowController == null) {
+      return Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: YellowGradients.primary,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFFEB3B).withOpacity(0.6),
+              blurRadius: 25,
+              spreadRadius: 8,
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.person_add_outlined,
+          size: 40,
+          color: Colors.black87,
+        ),
+      );
+    }
+
     return AnimatedBuilder(
-      animation: _glowAnimation,
+      animation: _glowAnimation!,
       builder: (context, child) {
         return Container(
           width: 80,
@@ -250,15 +356,15 @@ class _RegisterGlowingLogoState extends State<RegisterGlowingLogo>
             gradient: YellowGradients.primary,
             boxShadow: [
               BoxShadow(
-                color: Color(
+                color: const Color(
                   0xFFFFEB3B,
-                ).withOpacity(0.6 * _glowAnimation.value),
-                blurRadius: 25 * _glowAnimation.value,
-                spreadRadius: 8 * _glowAnimation.value,
+                ).withOpacity(0.6 * _glowAnimation!.value),
+                blurRadius: 25 * _glowAnimation!.value,
+                spreadRadius: 8 * _glowAnimation!.value,
               ),
             ],
           ),
-          child: Icon(
+          child: const Icon(
             Icons.person_add_outlined,
             size: 40,
             color: Colors.black87,
@@ -286,7 +392,7 @@ class RegisterForm extends StatelessWidget {
   final VoidCallback onBackToLogin;
 
   const RegisterForm({
-    Key? key,
+    super.key,
     required this.formKey,
     required this.nameController,
     required this.emailController,
@@ -301,22 +407,25 @@ class RegisterForm extends StatelessWidget {
     required this.onTermsToggle,
     required this.onRegister,
     required this.onBackToLogin,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 24),
-      padding: EdgeInsets.all(32),
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Color(0xFFFFEB3B).withOpacity(0.3), width: 1),
+        border: Border.all(
+          color: const Color(0xFFFFEB3B).withValues(alpha: 0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -340,7 +449,7 @@ class RegisterForm extends StatelessWidget {
                 return null;
               },
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             CustomTextField(
               controller: emailController,
               label: 'Email',
@@ -358,7 +467,7 @@ class RegisterForm extends StatelessWidget {
                 return null;
               },
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             CustomTextField(
               controller: passwordController,
               label: 'Password',
@@ -381,7 +490,7 @@ class RegisterForm extends StatelessWidget {
                 return null;
               },
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             CustomTextField(
               controller: confirmPasswordController,
               label: 'Confirm Password',
@@ -399,20 +508,20 @@ class RegisterForm extends StatelessWidget {
                 return null;
               },
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Checkbox(
                   value: acceptTerms,
                   onChanged: (value) => onTermsToggle(),
-                  activeColor: Color(0xFFFFEB3B),
+                  activeColor: const Color(0xFFFFEB3B),
                   checkColor: Colors.black87,
                 ),
                 Expanded(
                   child: RichText(
                     text: TextSpan(
                       style: TextStyle(color: Colors.grey[400], fontSize: 14),
-                      children: [
+                      children: const [
                         TextSpan(text: 'I agree to the '),
                         TextSpan(
                           text: 'Terms & Conditions',
@@ -435,11 +544,11 @@ class RegisterForm extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             GradientButton(
               onPressed: isLoading ? null : onRegister,
               child: isLoading
-                  ? SizedBox(
+                  ? const SizedBox(
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
@@ -449,7 +558,7 @@ class RegisterForm extends StatelessWidget {
                         ),
                       ),
                     )
-                  : Text(
+                  : const Text(
                       'Create Account',
                       style: TextStyle(
                         fontSize: 16,
@@ -458,7 +567,7 @@ class RegisterForm extends StatelessWidget {
                       ),
                     ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -468,7 +577,7 @@ class RegisterForm extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: onBackToLogin,
-                  child: Text(
+                  child: const Text(
                     'Sign In',
                     style: TextStyle(
                       color: Color(0xFFFFEB3B),

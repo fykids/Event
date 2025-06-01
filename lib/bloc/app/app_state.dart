@@ -35,3 +35,8 @@ class AuthFailure extends AppState {
   @override
   List<Object?> get props => [message];
 }
+
+class AuthSuccess extends AppState {
+  @override
+  List<Object?> get props => [];
+}

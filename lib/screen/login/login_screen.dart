@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:tubes/bloc/app/app_bloc.dart';
+import 'package:tubes/bloc/app/app_event.dart';
 import 'package:tubes/bloc/app/app_state.dart';
 import 'package:tubes/bloc/navigation/navigation_bloc.dart';
 import 'package:tubes/bloc/navigation/navigation_event.dart';
 import 'package:tubes/helper/widget_app.dart';
+import 'package:tubes/screen/home/home_screen.dart';
 import 'package:tubes/screen/login/login_view_model.dart';
+import 'package:tubes/screen/register/register_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   final AppBloc appBloc;
@@ -170,6 +173,14 @@ class _LoginScreenState extends State<LoginScreenBody>
                                       _passwordController.text,
                                     );
                                     await loginVM.login();
+                                    if (mounted) {
+                                      Navigator.of(context).pushAndRemoveUntil(
+                                        MaterialPageRoute(
+                                          builder: (context) => HomeScreen(),
+                                        ),
+                                        (route) => false,
+                                      );
+                                    }
                                   }
                                 },
                                 onGoogleLogin: () {
@@ -317,7 +328,14 @@ class LoginForm extends StatelessWidget {
               SizedBox(height: 20),
               TextButton(
                 onPressed: () {
-                  context.read<NavigationBloc>().add(NavigateToRegister());
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => RegisterScreen(
+                        appBloc: context.read<AppBloc>()..add(AppStarted()),
+                      ),
+                    ),
+                    (route) => false,
+                  );
                 },
                 child: Text(
                   'Sign Up',

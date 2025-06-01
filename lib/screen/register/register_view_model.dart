@@ -23,48 +23,85 @@ class RegisterViewModel extends ChangeNotifier {
 
   void updateEmail(String value) {
     _email = value;
+    _error = null; // Clear error when user changes input
     notifyListeners();
   }
 
   void updatePassword(String value) {
     _password = value;
+    _error = null;
     notifyListeners();
   }
 
   void updateConfirmPassword(String value) {
     _confirmPassword = value;
+    _error = null;
     notifyListeners();
   }
 
   void updateName(String value) {
     _name = value;
+    _error = null;
+    notifyListeners();
+  }
+
+  void setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void setError(String error) {
+    _error = error;
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  void clearError() {
+    _error = null;
     notifyListeners();
   }
 
   Future<void> register() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    // Validasi password dan konfirmasi
-    if (_password != _confirmPassword) {
-      _error = 'Password dan Konfirmasi Password tidak cocok';
-      _isLoading = false;
-      notifyListeners();
+    // Basic validation (form validation should handle most of this)
+    if (_name.trim().isEmpty ||
+        _email.trim().isEmpty ||
+        _password.isEmpty ||
+        _confirmPassword.isEmpty) {
+      setError("Please fill all fields");
       return;
     }
 
-    try {
-      appBloc.add(SignUp(
-        email: _email,
-        password: _password,
-        name: _name,
-      ));
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+    if (_password != _confirmPassword) {
+      setError("Passwords do not match");
+      return;
     }
+
+    // Clear any previous errors
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Send event to AppBloc for registration
+      // The BlocListener in the UI will handle the loading state
+      appBloc.add(
+        SignUp(
+          name: _name.trim(),
+          email: _email.trim().toLowerCase(),
+          password: _password,
+        ),
+      );
+    } catch (e) {
+      setError("Registration failed: ${e.toString()}");
+    }
+  }
+
+  void reset() {
+    _email = '';
+    _password = '';
+    _confirmPassword = '';
+    _name = '';
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
   }
 }

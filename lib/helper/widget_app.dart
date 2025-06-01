@@ -120,6 +120,7 @@ class CustomTextField extends StatelessWidget {
   final TextInputType keyboardType;
   final VoidCallback? onPasswordToggle;
   final String? Function(String?)? validator;
+  final Function(String)? onChanged;
 
   const CustomTextField({
     Key? key,
@@ -131,6 +132,7 @@ class CustomTextField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.onPasswordToggle,
     this.validator,
+    this.onChanged,
   }) : super(key: key);
 
   @override
@@ -141,6 +143,7 @@ class CustomTextField extends StatelessWidget {
       keyboardType: keyboardType,
       validator: validator,
       style: TextStyle(color: Colors.white),
+      onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey[400]),

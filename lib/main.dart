@@ -5,11 +5,15 @@ import 'package:provider/provider.dart';
 import 'package:tubes/bloc/app/app_bloc.dart';
 import 'package:tubes/bloc/app/app_event.dart';
 import 'package:tubes/bloc/app/app_state.dart';
+import 'package:tubes/bloc/event/event_bloc.dart'; // Add this import
 import 'package:tubes/bloc/navigation/navigation_bloc.dart';
 import 'package:tubes/bloc/navigation/navigation_event.dart';
 import 'package:tubes/bloc/navigation/navigation_state.dart';
 import 'package:tubes/data/repositories/auth_repository.dart';
+import 'package:tubes/data/repositories/event_repository.dart'; // Add this import
+import 'package:tubes/data/repositories/user_repository.dart';
 import 'package:tubes/firebase_options.dart';
+import 'package:tubes/screen/create_event/create_event_screen.dart';
 import 'package:tubes/screen/home/home_screen.dart';
 import 'package:tubes/screen/login/login_screen.dart';
 import 'package:tubes/screen/login/login_view_model.dart';
@@ -23,8 +27,10 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        Provider<AuthRepository>(create: (_) => AuthRepository()),
-        BlocProvider<AppBloc>(
+        Provider(create: (_) => AuthRepository()),
+        Provider(create: (_) => EventRepository()),
+        Provider(create: (_) => UserRepository()),
+        BlocProvider(
           create: (context) {
             final bloc = AppBloc(
               authRepository: context.read<AuthRepository>(),
@@ -33,13 +39,15 @@ void main() async {
             return bloc;
           },
         ),
-        BlocProvider<NavigationBloc>(
-          create: (_) => NavigationBloc()..add(NavigateToLogin()),
+        BlocProvider(create: (_) => NavigationBloc()),
+        BlocProvider(
+          create: (context) =>
+              EventBloc(repository: context.read<EventRepository>()),
         ),
-        ChangeNotifierProvider<LoginViewModel>(
+        ChangeNotifierProvider(
           create: (context) => LoginViewModel(appBloc: context.read<AppBloc>()),
         ),
-        ChangeNotifierProvider<RegisterViewModel>(
+        ChangeNotifierProvider(
           create: (context) =>
               RegisterViewModel(appBloc: context.read<AppBloc>()),
         ),
@@ -77,6 +85,8 @@ class MyApp extends StatelessWidget {
               return RegisterScreen(appBloc: context.read<AppBloc>());
             } else if (state is HomePageState) {
               return HomeScreen();
+            } else if (state is CreateEventPageState) {
+              return CreateEventScreen();
             }
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),

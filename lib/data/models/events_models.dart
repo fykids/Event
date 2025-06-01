@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tubes/data/models/task_item_model.dart';
 
 class EventModel {
-  final String id;
+  late final String id;
   final String name;
   final String description;
   final String location;
